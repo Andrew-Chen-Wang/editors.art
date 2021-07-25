@@ -75,7 +75,7 @@ class ProjectViewSet(ModelViewSet):
             raise PermissionDenied("Someone else has already claimed this job")
         project.lock_user = request.user
         project.lock_expire = timezone.now() + dt.timedelta(days=7)
-        project.save(fields=["user", "lock_expire"])
+        project.save(update_fields=["lock_user", "lock_expire"])
         return Response(status=201)
 
     @action(methods=["GET"], detail=False)
@@ -160,3 +160,4 @@ class EditViewSet(ModelViewSet):
         )
         project.video = edit.video
         project.save()
+        return Response()
