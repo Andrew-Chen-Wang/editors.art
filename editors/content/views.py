@@ -48,10 +48,14 @@ class CommunityViewSet(ModelViewSet):
 
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = ProjectSerializer(page, many=True)
+            serializer = ProjectSerializer(
+                page, many=True, **self.get_serializer_context()
+            )
             return self.get_paginated_response(serializer.data)
 
-        serializer = ProjectSerializer(queryset, many=True)
+        serializer = ProjectSerializer(
+            queryset, many=True, **self.get_serializer_context()
+        )
         return Response(serializer.data)
 
 
