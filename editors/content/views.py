@@ -68,7 +68,7 @@ class ProjectViewSet(ModelViewSet):
     @action(methods=["POST"], detail=False)
     def claim(self, request):
         try:
-            project = Project.objects.get(id=request.POST["project_id"])
+            project = Project.objects.get(id=request.data["project_id"])
         except Project.DoesNotExist:
             raise NotFound("Must include project_id in JSON body")
         if project.lock_expire and project.lock_expire > timezone.now():
@@ -138,7 +138,7 @@ class EditViewSet(ModelViewSet):
     @action(methods=["POST"], detail=False)
     def handle(self, request):
         try:
-            project = Project.objects.get(id=request.POST["project_id"])
+            project = Project.objects.get(id=request.data["project_id"])
             assert (
                 project.community.owner.is_superuser
                 or project.community.owner == request.user
@@ -152,11 +152,11 @@ class EditViewSet(ModelViewSet):
         # Approve 1
         # No 2
         try:
-            edit = Edit.objects.get(id=request.POST["edit_id"])
+            edit = Edit.objects.get(id=request.data["edit_id"])
         except Edit.DoesNotExist:
             raise NotFound("Edit id does not exist")
-        Edit.objects.filter(id=request.POST["edit_id"]).update(
-            status=request.POST["status"]
+        Edit.objects.filter(id=request.data["edit_id"]).update(
+            status=request.data["status"]
         )
         project.video = edit.video
         project.save()
