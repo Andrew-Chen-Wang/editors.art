@@ -51,7 +51,6 @@ class ProjectVideoViewSet(ModelViewSet):
 
 
 class EditViewSet(ModelViewSet):
-    queryset = Edit.objects.all()
     serializer_class = EditSerializer
 
     def get_queryset(self):
