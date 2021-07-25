@@ -38,28 +38,33 @@ class EditSerializer(ModelSerializer):
         fields = "__all__"
 
 
-class CommunityViewSet(ModelViewSet):
+class ListMixin(ModelViewSet):
+    def get_stuff(self, qs, serializer=None):
+        if serializer is None:
+            serializer = self.get_serializer_class()
+        queryset = self.filter_queryset(qs)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = serializer(page, many=True, **self.get_serializer_context())
+            return self.get_paginated_response(serializer.data)
+
+        serializer = serializer(queryset, many=True, **self.get_serializer_context())
+        return Response(serializer.data)
+
+
+class CommunityViewSet(ListMixin):
     queryset = Community.objects.all()
     serializer_class = CommunitySerializer
 
     @action(methods=["GET"], detail=True)
     def projects(self, request, pk=None):
-        queryset = self.filter_queryset(Project.objects.filter(community_id=pk))
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = ProjectSerializer(
-                page, many=True, **self.get_serializer_context()
-            )
-            return self.get_paginated_response(serializer.data)
-
-        serializer = ProjectSerializer(
-            queryset, many=True, **self.get_serializer_context()
+        return self.get_stuff(
+            Project.objects.filter(community_id=pk), ProjectSerializer
         )
-        return Response(serializer.data)
 
 
-class ProjectViewSet(ModelViewSet):
+class ProjectViewSet(ListMixin):
     queryset = Project.objects.filter(
         Q(lock_expire__isnull=False) | Q(lock_expire__lte=timezone.now())
     ).order_by("-lock_expire")
@@ -67,21 +72,9 @@ class ProjectViewSet(ModelViewSet):
 
     @action(methods=["GET"], detail=False)
     def my_projects(self, request):
-        queryset = self.filter_queryset(
-            Project.objects.filter(community__owner=request.user)
+        return self.get_stuff(
+            Project.objects.filter(community__owner=request.user),
         )
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = ProjectSerializer(
-                page, many=True, **self.get_serializer_context()
-            )
-            return self.get_paginated_response(serializer.data)
-
-        serializer = ProjectSerializer(
-            queryset, many=True, **self.get_serializer_context()
-        )
-        return Response(serializer.data)
 
     @action(methods=["POST"], detail=False)
     def claim(self, request):
@@ -98,19 +91,11 @@ class ProjectViewSet(ModelViewSet):
 
     @action(methods=["GET"], detail=False)
     def mine(self, request):
-        queryset = self.filter_queryset(
+        return self.get_stuff(
             Project.objects.filter(
                 lock_user=request.user, lock_expire__gte=timezone.now()
-            )
+            ),
         )
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
 
 
 class ProjectVideoViewSet(ModelViewSet):
@@ -126,7 +111,7 @@ class ProjectVideoViewSet(ModelViewSet):
         ).order_by("-id")
 
 
-class EditViewSet(ModelViewSet):
+class EditViewSet(ListMixin):
     serializer_class = EditSerializer
 
     def get_queryset(self):
@@ -141,17 +126,9 @@ class EditViewSet(ModelViewSet):
 
     @action(methods=["GET"], detail=False)
     def mine(self, request):
-        queryset = self.filter_queryset(
-            Edit.objects.filter(user=request.user).order_by("-id")
+        return self.get_stuff(
+            Edit.objects.filter(user=request.user).order_by("-id"),
         )
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
 
     @action(methods=["POST"], detail=False)
     def handle(self, request):
@@ -177,5 +154,5 @@ class EditViewSet(ModelViewSet):
             status=request.data["status"]
         )
         project.video = edit.video
-        project.save()
-        return Response()
+        project.save(update_fields=["video"])
+        return Response(status=201)
