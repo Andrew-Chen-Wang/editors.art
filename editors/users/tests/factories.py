@@ -1,8 +1,10 @@
 from typing import Any, Sequence
 
 from django.contrib.auth import get_user_model
-from factory import Faker, post_generation
+from factory import Faker, SubFactory, post_generation
 from factory.django import DjangoModelFactory
+
+from editors.users.models import Community, Project
 
 
 class UserFactory(DjangoModelFactory):
@@ -30,3 +32,21 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = get_user_model()
         django_get_or_create = ["username"]
+
+
+class CommunityFactory(DjangoModelFactory):
+    name = Faker("company")
+    owner = SubFactory(UserFactory)
+
+    class Meta:
+        model = Community
+
+
+class ProjectFactory(DjangoModelFactory):
+    community = SubFactory(CommunityFactory)
+    title = Faker("catch_phrase")
+    description = Faker("bs")
+    reward = 200
+
+    class Meta:
+        model = Project

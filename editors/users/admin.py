@@ -4,8 +4,10 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
 from editors.users.forms import UserChangeForm, UserCreationForm
+from editors.users.models import Community, Project, User
 
-User = get_user_model()
+admin.site.register(Community)
+admin.site.register(Project)
 
 
 @admin.register(User)
