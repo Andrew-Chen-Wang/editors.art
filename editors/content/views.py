@@ -65,6 +65,24 @@ class ProjectViewSet(ModelViewSet):
     ).order_by("-lock_expire")
     serializer_class = ProjectSerializer
 
+    @action(methods=["GET"], detail=False)
+    def my_projects(self, request):
+        queryset = self.filter_queryset(
+            Project.objects.filter(community__owner=request.user)
+        )
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = ProjectSerializer(
+                page, many=True, **self.get_serializer_context()
+            )
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ProjectSerializer(
+            queryset, many=True, **self.get_serializer_context()
+        )
+        return Response(serializer.data)
+
     @action(methods=["POST"], detail=False)
     def claim(self, request):
         try:
