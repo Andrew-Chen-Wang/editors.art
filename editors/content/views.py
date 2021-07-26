@@ -46,10 +46,14 @@ class ListMixin(ModelViewSet):
 
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = serializer(page, many=True, **self.get_serializer_context())
+            serializer = serializer(
+                page, many=True, context=self.get_serializer_context()
+            )
             return self.get_paginated_response(serializer.data)
 
-        serializer = serializer(queryset, many=True, **self.get_serializer_context())
+        serializer = serializer(
+            queryset, many=True, context=self.get_serializer_context()
+        )
         return Response(serializer.data)
 
 
@@ -65,10 +69,15 @@ class CommunityViewSet(ListMixin):
 
 
 class ProjectViewSet(ListMixin):
-    queryset = Project.objects.filter(
-        Q(lock_expire__isnull=False) | Q(lock_expire__lte=timezone.now())
-    ).order_by("-lock_expire")
+    queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+
+    def list(self, request, *args, **kwargs):
+        return self.get_stuff(
+            Project.objects.filter(
+                Q(lock_expire__isnull=True) | Q(lock_expire__lte=timezone.now())
+            ).order_by("-lock_expire")
+        )
 
     @action(methods=["GET"], detail=False)
     def my_projects(self, request):
